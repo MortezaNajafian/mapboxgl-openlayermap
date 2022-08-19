@@ -5,13 +5,14 @@ import s from './App.module.css';
 import AppContent from "./components/appContainer/AppContent";
 
 
-function App() {
 
+function App() {
     return (
         <div className={s.appContainer}>
-            <AppContent/>
+            <AppContent />
         </div>
-    );
+    )
+
 }
 
 export default App;
