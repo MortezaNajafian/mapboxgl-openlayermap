@@ -1,0 +1,18 @@
+@import "../sharedStyle.module";
+
+.wrapper {
+  position: relative;
+
+
+  .openLayerMapContainer {
+    height: 100vh;
+  }
+
+
+
+  .activeLine {
+    @include clearButton;
+  }
+
+}
+
