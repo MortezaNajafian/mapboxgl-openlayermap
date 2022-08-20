@@ -124,7 +124,7 @@ const useMapbox = (options: IUseMapbox) => {
     }, []);
 
 
-    return {currentMapName, lng, lat,zoom}
+    return {currentMapName, lng, lat,zoom,dispatch}
 
 }
 

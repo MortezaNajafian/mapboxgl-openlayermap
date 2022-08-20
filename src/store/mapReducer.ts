@@ -52,10 +52,8 @@ export const mapSlice = createSlice({
             if (findEl >= 0)
                 state.openLayerCoordinates.splice(findEl, 1)
         },
-        removeMapBoxCoordinateByUidAction: (state, action: PayloadAction<string>) => {
-            const findEl = state.openLayerCoordinates.findIndex(item => item.uid === action.payload)
-            if (findEl >= 0)
-                state.mapboxCoordinates.splice(findEl, 1)
+        removeMapBoxCoordinatesAction: (state) => {
+            state.mapboxCoordinates = []
         }
     },
 })
@@ -68,7 +66,7 @@ export const {
     updateOpenLayerCoordinatesAction,
     removeOpenLayerCoordinateByUidAction,
     updateMapBoxCoordinatesAction,
-    removeMapBoxCoordinateByUidAction
+    removeMapBoxCoordinatesAction
 } = mapSlice.actions
 
 export default mapSlice.reducer

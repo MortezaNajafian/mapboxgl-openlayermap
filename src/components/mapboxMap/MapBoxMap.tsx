@@ -5,6 +5,7 @@ import MapNameEnum from "../../enums/MapNameEnum";
 import {useAppSelector} from "../../app/storeHook";
 import {toLonLat} from 'ol/proj'
 import useMapbox from "../../hooks/useMapbox";
+import {removeMapBoxCoordinatesAction} from "../../store/mapReducer";
 
 const MapBoxMap = () => {
 
@@ -26,14 +27,20 @@ const MapBoxMap = () => {
         }
     }), []);
 
-    const {lng, lat, currentMapName, zoom} = useMapbox({linestring, map, mapContainer, geojson})
+    const {lng, lat, currentMapName, zoom,dispatch} = useMapbox({linestring, map, mapContainer, geojson})
 
 
-    const clearLastPoint = () => {
+    const removeLinesFromStore = ()=>{
+        dispatch(removeMapBoxCoordinatesAction())
+    }
+
+
+    const removeLines = () => {
         geojson.features = [];
         linestring.geometry.coordinates = []
         const source = map.current?.getSource('geojson') as { setData: (value: any) => void }
         source?.setData(geojson);
+        removeLinesFromStore()
     }
 
 
@@ -72,7 +79,7 @@ const MapBoxMap = () => {
     return (
         <div className={s.wrapper}>
             <div ref={mapContainer} className={s.mapboxGLContainer}></div>
-            <button onClick={clearLastPoint} className={s.clearButton}>Remove Lines</button>
+            <button onClick={removeLines} className={s.clearButton}>Remove Lines</button>
         </div>
     )
 }
