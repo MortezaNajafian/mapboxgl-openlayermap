@@ -9,7 +9,13 @@ import {Geometry} from "ol/geom";
 import {useMapConfiguration} from "./useMapConfiguration";
 import {Tile as TileLayer, Vector as VectorLayer} from 'ol/layer';
 import {Vector as VectorSource} from 'ol/source';
-import {ICoords, removeOpenLayerCoordinateByUidAction, updateOpenLayerCoordinatesAction} from "../store/mapReducer";
+import {
+    clearMapBoxCoordinatesAction,
+    ICoords,
+    removeOpenLayerCoordinateByUidAction,
+    updateCurrentMapAction,
+    updateOpenLayerCoordinatesAction
+} from "../store/mapReducer";
 import Select from "ol/interaction/Select";
 import {altKeyOnly, click} from "ol/events/condition";
 import {Fill, Stroke, Style} from "ol/style";
@@ -39,7 +45,15 @@ const useOpenLayer = (options: IUseOpenLayer) => {
     );
 
     const clearSelectedFeature = (featureId: string) => {
-        dispatch(removeOpenLayerCoordinateByUidAction(featureId))
+        if (featureId !== "mapbox-line") {
+            dispatch(removeOpenLayerCoordinateByUidAction(featureId))
+        }
+    }
+
+
+    const clearMapBoxCoordinates = () => {
+        dispatch(updateCurrentMapAction(MapNameEnum.OPEN_LAYER_MAP))
+        dispatch(clearMapBoxCoordinatesAction())
     }
 
     const selectClick = new Select({
@@ -64,7 +78,6 @@ const useOpenLayer = (options: IUseOpenLayer) => {
     }), []);
 
 
-
     useEffect(() => {
         if (map?.current) return;
         view.current = new View({
@@ -72,7 +85,6 @@ const useOpenLayer = (options: IUseOpenLayer) => {
             zoom: zoom,
             zoomFactor: 2.38
         })
-
 
         map.current = new Map({
             layers: [
@@ -90,6 +102,11 @@ const useOpenLayer = (options: IUseOpenLayer) => {
 
 
         map.current?.on("pointerdrag", function () {
+            const mapboxLine = source.getFeatureById('mapbox-line');
+            if (mapboxLine) {
+                source.removeFeature(mapboxLine)
+                clearMapBoxCoordinates()
+            }
             const center = view.current?.getCenter();
             const lonLat = toLonLat(center as number[])
             updateData({
@@ -102,17 +119,19 @@ const useOpenLayer = (options: IUseOpenLayer) => {
 
         view.current?.on('change:resolution', () => {
             const newZoom = view.current?.getZoom();
-            if (currZoom != newZoom) {
+            if (currZoom !== newZoom) {
                 updateZoom(newZoom || 14, MapNameEnum.OPEN_LAYER_MAP)
             }
         })
 
         source.on('addfeature', (evt) => {
-            const feature = evt?.feature
-            feature?.setId(uuidV4())
+            const feature = evt?.feature;
+            const id = feature?.getId();
+            if (!id)
+                feature?.setId(uuidV4())
             feature?.setStyle(selected_polygon_style)
             const coords = feature?.getGeometry() as { getCoordinates: () => number[][] } | undefined
-            if (coords?.getCoordinates())
+            if (coords?.getCoordinates() && id !== "mapbox-line")
                 addFeature({uid: feature?.getId() as string, coords: coords?.getCoordinates()})
         })
 
@@ -139,7 +158,7 @@ const useOpenLayer = (options: IUseOpenLayer) => {
     });
 
 
-    return {lng, lat, zoom, currentMapName, selected_polygon_style,drawObj}
+    return {lng, lat, zoom, currentMapName, selected_polygon_style, drawObj}
 }
 
 

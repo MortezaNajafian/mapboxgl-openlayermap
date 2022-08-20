@@ -1,8 +1,8 @@
-import {MutableRefObject, useEffect} from "react";
-import mapboxgl, {AnySourceData, Map} from "mapbox-gl";
+import {MutableRefObject, useCallback, useEffect} from "react";
+import mapboxgl, {AnySourceData, GeoJSONSource, Map} from "mapbox-gl";
 import MapNameEnum from "../enums/MapNameEnum";
 import {useMapConfiguration} from "./useMapConfiguration";
-import {updateMapBoxCoordinatesAction} from "../store/mapReducer";
+import {updateCurrentMapAction, updateMapBoxCoordinatesAction} from "../store/mapReducer";
 
 
 interface IUseMapbox {
@@ -18,10 +18,19 @@ const useMapbox = (options: IUseMapbox) => {
     const {lng, zoom, lat, currentMapName, updateZoom, updateData, dispatch} = useMapConfiguration();
     const {map, mapContainer, geojson, linestring} = options;
 
+    const addCoordinateInMapBox = useCallback(
+        (coords: { geometry: { type: string, coordinates: number[][] } }[]) => {
+            dispatch(updateCurrentMapAction(MapNameEnum.MAPBOX_MAP))
+            const findLine = coords.find(item => item.geometry.type === "LineString")
+            if (findLine) {
+                dispatch(updateMapBoxCoordinatesAction(findLine.geometry.coordinates))
+            } else {
+                dispatch(updateMapBoxCoordinatesAction([]))
+            }
+        },
+        [],
+    );
 
-    const addCoordinateInMapBox = (coords: number[][]) => {
-        dispatch(updateMapBoxCoordinatesAction({uid: String(new Date().getTime()), coords}))
-    }
 
     useEffect(() => {
         if (map?.current) return;
@@ -30,8 +39,6 @@ const useMapbox = (options: IUseMapbox) => {
             style: "https://api.maptiler.com/maps/basic-v2/style.json?key=xyoYFdk7IF6sarFDG4w1",
             center: [lng, lat],
             zoom: zoom,
-
-            preserveDrawingBuffer: true,
         });
 
         map.current?.on('drag', () => {
@@ -64,6 +71,7 @@ const useMapbox = (options: IUseMapbox) => {
                 },
                 filter: ['in', '$type', 'Point']
             });
+
             map.current?.addLayer({
                 id: 'measure-lines',
                 type: 'line',
@@ -76,7 +84,7 @@ const useMapbox = (options: IUseMapbox) => {
                     'line-color': '#000',
                     'line-width': 2.5
                 },
-                filter: ['in', '$type', 'LineString']
+                filter: ['in', '$type', 'LineString'],
             });
 
             map.current?.on('click', (e) => {
@@ -112,20 +120,32 @@ const useMapbox = (options: IUseMapbox) => {
                         (point: any) => point.geometry.coordinates
                     );
 
-                    addCoordinateInMapBox(linestring.geometry.coordinates)
                     geojson.features.push(linestring as never);
                 }
 
-                const source = map.current?.getSource('geojson') as { setData: (value: any) => void }
+                addCoordinateInMapBox(geojson.features)
+                const source = map.current?.getSource('geojson') as GeoJSONSource
                 source?.setData(geojson);
 
+            });
+
+
+            map.current?.on('mousemove', (e) => {
+                const features = map.current?.queryRenderedFeatures(e.point, {
+                    layers: ['measure-points']
+                });
+
+                if (map.current)
+                    map.current.getCanvas().style.cursor = features?.length
+                        ? 'pointer'
+                        : 'crosshair';
             });
         });
 
     }, []);
 
 
-    return {currentMapName, lng, lat,zoom,dispatch}
+    return {currentMapName, lng, lat, zoom, dispatch}
 
 }
 

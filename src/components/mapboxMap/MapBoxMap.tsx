@@ -1,56 +1,45 @@
-import {Map} from 'mapbox-gl'
-import {useEffect, useMemo, useRef} from "react";
+import {GeoJSONSource, Map} from 'mapbox-gl'
+import {useEffect, useRef} from "react";
 import s from './MapBoxGLMap.module.scss'
 import MapNameEnum from "../../enums/MapNameEnum";
 import {useAppSelector} from "../../app/storeHook";
 import {toLonLat} from 'ol/proj'
 import useMapbox from "../../hooks/useMapbox";
-import {removeMapBoxCoordinatesAction} from "../../store/mapReducer";
 
 const MapBoxMap = () => {
 
     const olCoordinates = useAppSelector(state => state.map.openLayerCoordinates);
+    const mapboxCoordinates = useAppSelector(state => state.map.mapboxCoordinates);
     const mapContainer = useRef(null);
-    const map = useRef<null | Map>(null);
-
-    const geojson = useMemo(() => ({
+    const geojsonRef = useRef<any>({
         type: 'FeatureCollection',
         'features':
             []
-    }), []);
-
-    const linestring: any = useMemo(() => ({
+    });
+    const linestringRef = useRef<any>({
         'type': 'Feature',
         'geometry': {
             'type': 'LineString',
             'coordinates': []
         }
-    }), []);
+    });
+    const map = useRef<null | Map>(null);
+    const geojson = geojsonRef.current
+    const linestring = linestringRef.current
 
-    const {lng, lat, currentMapName, zoom,dispatch} = useMapbox({linestring, map, mapContainer, geojson})
-
-
-    const removeLinesFromStore = ()=>{
-        dispatch(removeMapBoxCoordinatesAction())
-    }
-
-
-    const removeLines = () => {
-        geojson.features = [];
-        linestring.geometry.coordinates = []
-        const source = map.current?.getSource('geojson') as { setData: (value: any) => void }
-        source?.setData(geojson);
-        removeLinesFromStore()
-    }
+    const {lng, lat, currentMapName, zoom} = useMapbox({linestring, map, mapContainer, geojson})
 
 
     useEffect(() => {
             if (currentMapName !== MapNameEnum.MAPBOX_MAP && map.current) {
                 const transformedCoordinates = olCoordinates.map(item => (item.coords.map((coord) => ([...toLonLat(coord)]))));
-                const source = map.current?.getSource('geojson') as { setData: (value: any) => void }
+                if (!transformedCoordinates.length) return
+                const source = map.current?.getSource('geojson') as GeoJSONSource
                 source?.setData({
                     'type': 'Feature',
-                    'properties': {},
+                    'properties': {
+                        "id": "openLayer-map-lines"
+                    },
                     'geometry': {
                         'type': 'MultiLineString',
                         'coordinates': transformedCoordinates
@@ -61,6 +50,14 @@ const MapBoxMap = () => {
         ,
         [olCoordinates]
     )
+
+    useEffect(() => {
+        if (currentMapName !== MapNameEnum.MAPBOX_MAP && !mapboxCoordinates.length) {
+            geojson.features = []
+            const source = map.current?.getSource('geojson') as GeoJSONSource
+            source?.setData(geojson);
+        }
+    }, [mapboxCoordinates, currentMapName])
 
 
     useEffect(() => {
@@ -79,7 +76,6 @@ const MapBoxMap = () => {
     return (
         <div className={s.wrapper}>
             <div ref={mapContainer} className={s.mapboxGLContainer}></div>
-            <button onClick={removeLines} className={s.clearButton}>Remove Lines</button>
         </div>
     )
 }

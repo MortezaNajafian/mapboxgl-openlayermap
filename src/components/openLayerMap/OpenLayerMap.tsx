@@ -16,15 +16,12 @@ const OpenLayerMap = () => {
     const mapContainer = useRef(null);
     const map = useRef<null | Map>(null);
     const view = useRef<null | View>(null);
-
+    const [currentMapBoxCoords, setCurrentMapBoxCoords] = useState<number[][]>([])
     const [activeDrawLine, setActiveDrawLine] = useState(true);
     const mapBoxCoordinates = useAppSelector(state => state.map.mapboxCoordinates);
 
 
-    const transformedCoordinates = useMemo(() => mapBoxCoordinates.map(item => ({
-        ...item,
-        coords: item.coords.map((coord) => ([...fromLonLat(coord)]))
-    })), [mapBoxCoordinates]);
+    const transformedCoordinates = useMemo(() => mapBoxCoordinates.map(item => ([...fromLonLat(item)])), [mapBoxCoordinates]);
 
     const currZoom = view.current?.getZoom();
 
@@ -53,7 +50,7 @@ const OpenLayerMap = () => {
         if (currentMapName !== MapNameEnum.OPEN_LAYER_MAP && view.current) {
             view.current?.setCenter(fromLonLat([lng, lat]))
         }
-    }, [currentMapName, lat, lng, view?.current]);
+    }, [currentMapName, lat, lng]);
 
 
     useEffect(() => {
@@ -63,17 +60,42 @@ const OpenLayerMap = () => {
     }, [currentMapName, zoom])
 
     useEffect(() => {
+        if (currentMapName !== MapNameEnum.OPEN_LAYER_MAP) {
+            let temp = [...currentMapBoxCoords]
+            transformedCoordinates.forEach(item => {
+                const findInCurrentCoordinates = temp.find(subItem => subItem[0].toString() === item[0].toString() && subItem[1].toString() === item[1].toString());
+                if (!findInCurrentCoordinates) {
+                    temp.push(item)
+                }
+            })
+            temp.forEach((item) => {
+                const findInTransformed = transformedCoordinates.findIndex(subItem => subItem[0].toString() === item[0].toString() && subItem[1].toString() === item[1].toString());
+                if (findInTransformed === -1) {
+                    const findIndexInTemp = temp.findIndex(subItem => subItem[0].toString() === item[0].toString() && subItem[1].toString() === item[1].toString());
+                    temp.splice(findIndexInTemp, 1)
+                }
+            })
+            setCurrentMapBoxCoords(temp)
+        }
+    }, [transformedCoordinates, currentMapName]);
 
-        const features = transformedCoordinates?.map(item => {
-            const feature = new Feature(new LineString(item.coords))
-            feature.setId(item.uid)
+
+    useEffect(() => {
+        if (currentMapName !== MapNameEnum.OPEN_LAYER_MAP) {
+            source.clear()
+            const oldFeature = source.getFeatureById('mapbox-line')
+            const feature = new Feature(new LineString(currentMapBoxCoords))
+            feature.setId('mapbox-line')
             feature.setStyle(selected_polygon_style)
-            return feature
-        })
+            if (!oldFeature) {
+                source.addFeature(feature)
+            } else {
+                oldFeature?.setGeometry(feature.getGeometry())
+            }
 
-        source.addFeatures(features)
+        }
 
-    }, [transformedCoordinates]);
+    }, [currentMapBoxCoords, currentMapName])
 
 
     return (

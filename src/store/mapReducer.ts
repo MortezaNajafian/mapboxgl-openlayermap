@@ -4,7 +4,7 @@ import MapNameEnum from "../enums/MapNameEnum";
 import defaultPosition from "../constants/defaultPosition";
 
 export interface ICoords {
-    uid: string | number,
+    uid?: string | number,
     coords: number[][]
 }
 
@@ -15,7 +15,7 @@ export interface MapState {
     zoom: number,
     currentMapName: MapNameEnum,
     openLayerCoordinates: ICoords[],
-    mapboxCoordinates: ICoords[]
+    mapboxCoordinates: number[][]
 }
 
 export type MapPosition = Omit<MapState, 'currentMapName' | 'zoom' | 'openLayerCoordinates' | 'mapboxCoordinates'>;
@@ -44,17 +44,17 @@ export const mapSlice = createSlice({
         updateOpenLayerCoordinatesAction: (state, action: PayloadAction<ICoords>) => {
             state.openLayerCoordinates.push(action.payload)
         },
-        updateMapBoxCoordinatesAction: (state, action: PayloadAction<ICoords>) => {
-            state.mapboxCoordinates.push(action.payload)
+        updateMapBoxCoordinatesAction: (state, action: PayloadAction<number[][]>) => {
+            state.mapboxCoordinates = action.payload
         },
         removeOpenLayerCoordinateByUidAction: (state, action: PayloadAction<string>) => {
             const findEl = state.openLayerCoordinates.findIndex(item => item.uid === action.payload)
             if (findEl >= 0)
                 state.openLayerCoordinates.splice(findEl, 1)
         },
-        removeMapBoxCoordinatesAction: (state) => {
+        clearMapBoxCoordinatesAction: (state) => {
             state.mapboxCoordinates = []
-        }
+        },
     },
 })
 
@@ -66,7 +66,7 @@ export const {
     updateOpenLayerCoordinatesAction,
     removeOpenLayerCoordinateByUidAction,
     updateMapBoxCoordinatesAction,
-    removeMapBoxCoordinatesAction
+    clearMapBoxCoordinatesAction
 } = mapSlice.actions
 
 export default mapSlice.reducer
