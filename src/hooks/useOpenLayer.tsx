@@ -31,7 +31,6 @@ const useOpenLayer = (options: IUseOpenLayer) => {
     const {source, vector, mapContainer, view, currZoom, setActiveDrawLine, map} = options;
     const {lng, lat, zoom, currentMapName, updateZoom, updateData, dispatch} = useMapConfiguration();
 
-
     const addFeature = useCallback(
         (coords: ICoords) => {
             dispatch(updateOpenLayerCoordinatesAction(coords))
@@ -64,9 +63,6 @@ const useOpenLayer = (options: IUseOpenLayer) => {
         freehandCondition: altKeyOnly,
     }), []);
 
-    drawObj.on('change:active', (activate) => {
-        setActiveDrawLine(!activate.oldValue)
-    })
 
 
     useEffect(() => {
@@ -74,6 +70,7 @@ const useOpenLayer = (options: IUseOpenLayer) => {
         view.current = new View({
             center: [lng, lat],
             zoom: zoom,
+            zoomFactor: 2.38
         })
 
 
@@ -82,7 +79,7 @@ const useOpenLayer = (options: IUseOpenLayer) => {
                 new TileLayer({
                     source: new TileJson({
                         url: "https://api.maptiler.com/maps/basic-v2/tiles.json?key=xyoYFdk7IF6sarFDG4w1",
-
+                        tileSize: 512
                     }),
                 }),
                 vector
@@ -134,11 +131,15 @@ const useOpenLayer = (options: IUseOpenLayer) => {
             source.removeFeature(feature.selected[0])
         })
 
+        drawObj.on('change:active', (activate) => {
+            setActiveDrawLine(!activate.oldValue)
+        })
+
 
     });
 
 
-    return {lng, lat, zoom, currentMapName, selected_polygon_style}
+    return {lng, lat, zoom, currentMapName, selected_polygon_style,drawObj}
 }
 
 

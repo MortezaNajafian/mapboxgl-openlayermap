@@ -30,6 +30,7 @@ const useMapbox = (options: IUseMapbox) => {
             style: "https://api.maptiler.com/maps/basic-v2/style.json?key=xyoYFdk7IF6sarFDG4w1",
             center: [lng, lat],
             zoom: zoom,
+
             preserveDrawingBuffer: true,
         });
 

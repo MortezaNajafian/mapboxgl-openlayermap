@@ -6,7 +6,6 @@ import {useEffect, useMemo, useRef, useState} from "react";
 import s from './OpenLayerMap.module.scss'
 import {fromLonLat} from "ol/proj";
 import MapNameEnum from "../../enums/MapNameEnum";
-import Draw from 'ol/interaction/Draw';
 import {useAppSelector} from "../../app/storeHook";
 import {Feature} from "ol";
 import {LineString} from "ol/geom";
@@ -35,7 +34,7 @@ const OpenLayerMap = () => {
     }), []);
 
 
-    const {lng, zoom, lat, currentMapName, selected_polygon_style} = useOpenLayer({
+    const {lng, zoom, lat, currentMapName, selected_polygon_style, drawObj} = useOpenLayer({
         setActiveDrawLine,
         view,
         currZoom,
@@ -46,11 +45,7 @@ const OpenLayerMap = () => {
     })
 
     const activeStatusInteraction = () => {
-        map.current?.getInteractions().forEach((interaction) => {
-            if (interaction instanceof Draw) {
-                interaction.setActive(!interaction.getActive())
-            }
-        })
+        drawObj.setActive(!drawObj.getActive())
     }
 
 
