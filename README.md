@@ -14,6 +14,26 @@ Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 The page will reload if you make edits.\
 You will also see any lint errors in the console.
 
+
+## How Yo Use
+This has two map.
+By drawing line in each map, first of all other map will be clear then two map show the same line.
+
+### Draw line on Right map (Open Layer Map)
+You can draw line in the right map by drag and drop mouse on it.
+There is a Button on this map for activating drawing line. to move map you should de active drawing by click on the button or vice versa.
+For removing line you must click on each line.
+
+
+### Draw line on left map (Mapbox GL)
+Yo can draw line by clicking on map to create a point thus line will make between points.
+Also you can remove line by click on points.
+You can move map by holding left click of mouse.
+
+#### Extra information
+Zoom is already active by scrolling mouse.
+After changing zoom,lng and lat these data are change in location bar of window. You can copy address on paste that in new tab to take map in that position.
+
 ### `npm test`
 
 Launches the test runner in the interactive watch mode.\

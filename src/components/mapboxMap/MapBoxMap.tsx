@@ -33,7 +33,6 @@ const MapBoxMap = () => {
     useEffect(() => {
             if (currentMapName !== MapNameEnum.MAPBOX_MAP && map.current) {
                 const transformedCoordinates = olCoordinates.map(item => (item.coords.map((coord) => ([...toLonLat(coord)]))));
-                if (!transformedCoordinates.length) return
                 const source = map.current?.getSource('geojson') as GeoJSONSource
                 source?.setData({
                     'type': 'Feature',
