@@ -15,7 +15,7 @@ The page will reload if you make edits.\
 You will also see any lint errors in the console.
 
 
-## How Yo Use
+## How To Use
 This has two map.
 By drawing line in each map, first of all other map will be clear then two map show the same line.
 
