@@ -39,7 +39,7 @@ We can rotate by right click of mouse in windows or linux or hold two finger in 
 
 
 ## E2E Testing
-For run e2e testing you should run ***yarn cypress*** for visual testing. Also for headless testing you
+For run e2e testing you should run ***yarn cypress*** then select e2e > select browser for test > select test file for visual testing. Also for headless testing you
 can run ***yarn cypress:headless***
 
 
