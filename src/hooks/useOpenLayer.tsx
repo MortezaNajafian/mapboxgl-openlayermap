@@ -1,89 +1,90 @@
-import {MutableRefObject, useCallback, useEffect, useMemo} from "react";
+import {useCallback, useEffect} from "react";
 import View from "ol/View";
 import Map from "ol/Map";
 import TileJson from "ol/source/TileJSON";
-import {toLonLat} from "ol/proj";
-import MapNameEnum from "../enums/MapNameEnum";
-import {v4 as uuidV4} from "uuid";
-import {Geometry} from "ol/geom";
-import {useMapConfiguration} from "./useMapConfiguration";
+import {toLonLat, fromLonLat} from "ol/proj";
+import {IMapConfiguration} from "./useMapConfiguration";
 import {Tile as TileLayer, Vector as VectorLayer} from 'ol/layer';
-import {Vector as VectorSource} from 'ol/source';
 import {
-    clearMapBoxCoordinatesAction,
     ICoords,
-    removeOpenLayerCoordinateByUidAction,
-    updateCurrentMapAction,
-    updateOpenLayerCoordinatesAction
 } from "../store/mapReducer";
 import Select from "ol/interaction/Select";
 import {altKeyOnly, click} from "ol/events/condition";
-import {Fill, Stroke, Style} from "ol/style";
 import Draw from "ol/interaction/Draw";
+import {GeoJSONSource} from "mapbox-gl";
+import {Vector as VectorSource} from "ol/source";
+import {Geometry} from "ol/geom";
 
 
 interface IUseOpenLayer {
-    map: MutableRefObject<Map | null>
-    source: VectorSource<Geometry>
-    vector: VectorLayer<VectorSource<Geometry>>
-    mapContainer: MutableRefObject<any>
-    view: MutableRefObject<View | null>
-    currZoom: number | undefined
-    setActiveDrawLine: (value: boolean) => void
+    config: IMapConfiguration
 }
 
 const useOpenLayer = (options: IUseOpenLayer) => {
+    const {config} = options;
+    const {
+        lng,
+        openLayerView,
+        openLayerMap,
+        mapboxMap,
+        lat,
+        zoom,
+        updateZoom,
+        updateData,
+        geoJsonRef,
+        sourceRef,
+        vectorRef,
+        openLayerFeatureStyle,
+        openLayerMapContainer,
+        drawObjectRef,
+        setActiveDrawLine,
+        updateMapboxFeatures
+    } = config
 
-    const {source, vector, mapContainer, view, currZoom, setActiveDrawLine, map} = options;
-    const {lng, lat, zoom, currentMapName, updateZoom, updateData, dispatch} = useMapConfiguration();
+    const map = openLayerMap
 
-    const addFeature = useCallback(
-        (coords: ICoords) => {
-            dispatch(updateOpenLayerCoordinatesAction(coords))
+
+    const addFeatureToMapBox = useCallback(
+        (data: ICoords) => {
+            const source = mapboxMap.current?.getSource('geojson') as GeoJSONSource
+            const transformedCoordinates = data.coords.map((coord) => ([...toLonLat(coord)]))
+            geoJsonRef.current.features.push({
+                'type': 'Feature',
+                'properties': {
+                    "id": data.uid
+                },
+                'geometry': {
+                    'type': 'LineString',
+                    'coordinates': transformedCoordinates
+                }
+            })
+            source?.setData(geoJsonRef.current);
         },
         [],
     );
 
-    const clearSelectedFeature = (featureId: string) => {
+
+    const clearSelectedFeature = useCallback((featureId: string) => {
         if (featureId !== "mapbox-line") {
-            dispatch(removeOpenLayerCoordinateByUidAction(featureId))
+            geoJsonRef.current.features = geoJsonRef.current.features.filter((item: { properties: { id: string; }; }) => item.properties.id !== featureId)
+            updateMapboxFeatures()
         }
-    }
+    }, [])
 
-
-    const clearMapBoxCoordinates = () => {
-        dispatch(updateCurrentMapAction(MapNameEnum.OPEN_LAYER_MAP))
-        dispatch(clearMapBoxCoordinatesAction())
-    }
 
     const selectClick = new Select({
         condition: click
     });
 
-    const selected_polygon_style = new Style({
-        stroke: new Stroke({
-            width: 5,
-            color: "#ff0000"
-        }),
-        fill: new Fill({
-            color: "#aa2727"
-        })
-    })
-
-    const drawObj = useMemo(() => new Draw({
-        source: source,
-        type: "LineString",
-        freehand: true,
-        freehandCondition: altKeyOnly,
-    }), []);
-
 
     useEffect(() => {
         if (map?.current) return;
-        view.current = new View({
-            center: [lng, lat],
-            zoom: zoom,
-            zoomFactor: 2.38
+
+        openLayerView.current = new View({
+            center: fromLonLat([+lng, +lat]),
+            zoom: +zoom,
+            zoomFactor: 2.38,
+            // projection: 'EPSG:4326',
         })
 
         map.current = new Map({
@@ -94,71 +95,92 @@ const useOpenLayer = (options: IUseOpenLayer) => {
                         tileSize: 512
                     }),
                 }),
-                vector
             ],
-            target: mapContainer.current || "",
-            view: view.current,
+
+            target: openLayerMapContainer.current || "",
+            view: openLayerView.current,
         });
 
 
-        map.current?.on("pointerdrag", function () {
-            const mapboxLine = source.getFeatureById('mapbox-line');
-            if (mapboxLine) {
-                source.removeFeature(mapboxLine)
-                clearMapBoxCoordinates()
-            }
-            const center = view.current?.getCenter();
+        openLayerView.current?.on("change:center", function (data) {
+            const center = data.target.getCenter();
             const lonLat = toLonLat(center as number[])
             updateData({
                 lng: lonLat[0] || 0,
                 lat: lonLat[1] || 0,
-            }, MapNameEnum.OPEN_LAYER_MAP)
+            })
 
+            if (!mapboxMap.current?.isMoving())
+                mapboxMap.current?.setCenter({
+                    lng: lonLat[0] || 0,
+                    lat: lonLat[1] || 0,
+                })
         });
 
 
-        view.current?.on('change:resolution', () => {
-            const newZoom = view.current?.getZoom();
-            if (currZoom !== newZoom) {
-                updateZoom(newZoom || 14, MapNameEnum.OPEN_LAYER_MAP)
-            }
+        openLayerView.current?.on('change:resolution', () => {
+            const newZoom = openLayerView.current?.getZoom() || 0;
+            updateZoom(newZoom || 14)
+            if (!mapboxMap.current?.isZooming())
+                mapboxMap.current?.setZoom(newZoom)
         })
 
-        source.on('addfeature', (evt) => {
+
+        sourceRef.current = new VectorSource({wrapX: false})
+
+        sourceRef.current?.on('addfeature', (evt) => {
             const feature = evt?.feature;
+            feature?.setStyle(openLayerFeatureStyle)
             const id = feature?.getId();
-            if (!id)
-                feature?.setId(uuidV4())
-            feature?.setStyle(selected_polygon_style)
+            if (!id) {
+                feature?.setId(`open-layer-line-${new Date().getTime()}`)
+                const findMapboxLine = sourceRef.current?.getFeatureById('mapbox-line');
+                if (findMapboxLine) {
+                    sourceRef.current?.removeFeature(findMapboxLine)
+                    geoJsonRef.current.features = geoJsonRef.current.features.filter((item: { properties: { id: string | string[]; }; }) => !item?.properties?.id.includes("mapbox"))
+                    updateMapboxFeatures()
+                }
+            }
             const coords = feature?.getGeometry() as { getCoordinates: () => number[][] } | undefined
             if (coords?.getCoordinates() && id !== "mapbox-line")
-                addFeature({uid: feature?.getId() as string, coords: coords?.getCoordinates()})
+                addFeatureToMapBox({uid: feature?.getId() as string, coords: coords?.getCoordinates()})
         })
 
-        source.on('removefeature', (evt) => {
+        sourceRef.current?.on('removefeature', (evt) => {
             const feature = evt?.feature;
             clearSelectedFeature(feature?.getId() as string)
         })
 
-        map.current?.on('loadend', () => {
-            map.current?.addInteraction(selectClick)
-            map.current?.addInteraction(drawObj)
+        vectorRef.current = new VectorLayer({
+            source: sourceRef.current,
 
         })
 
-        selectClick.on('select', (feature) => {
-            source.removeFeature(feature.selected[0])
+        map.current?.addLayer(vectorRef.current as VectorLayer<VectorSource<Geometry>>)
+
+        drawObjectRef.current = new Draw({
+            source: sourceRef.current || undefined,
+            type: "LineString",
+            freehand: true,
+            freehandCondition: altKeyOnly,
         })
 
-        drawObj.on('change:active', (activate) => {
+
+        map.current?.addInteraction(selectClick)
+        map.current?.addInteraction(drawObjectRef.current as Draw)
+
+
+        drawObjectRef.current?.on('change:active', (activate) => {
             setActiveDrawLine(!activate.oldValue)
         })
 
 
+        selectClick.on('select', (feature) => {
+            sourceRef.current?.removeFeature(feature.selected[0])
+        })
+
+
     });
-
-
-    return {lng, lat, zoom, currentMapName, selected_polygon_style, drawObj}
 }
 
 

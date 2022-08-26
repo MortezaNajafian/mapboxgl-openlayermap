@@ -1,50 +1,144 @@
-import {useAppDispatch, useAppSelector} from "../app/storeHook";
-import {useCallback, useEffect} from "react";
-import {MapPosition, updateCurrentMapAction, updatePositionAction, updateZoomAction} from "../store/mapReducer";
-import MapNameEnum from "../enums/MapNameEnum";
+import {ThunkAppDispatch, useAppDispatch} from "../app/storeHook";
+import {MutableRefObject, useCallback, useRef, useState} from "react";
+import {MapPosition, updatePositionAction, updateZoomAction} from "../store/mapReducer";
 import {useSearchParams} from 'react-router-dom'
 import defaultPosition from "../constants/defaultPosition";
+import {GeoJSONSource, Map as MapBoxType} from "mapbox-gl";
+import Map from "ol/Map";
+import View from "ol/View";
+import Draw from "ol/interaction/Draw";
+import {Vector as VectorSource} from "ol/source";
+import {Geometry, LineString} from "ol/geom";
+import {Vector as VectorLayer} from "ol/layer";
+import {Fill, Stroke, Style} from "ol/style";
+import {Coordinate} from "ol/coordinate";
+import {fromLonLat} from "ol/proj";
+import {Feature} from "ol";
 
-export const useMapConfiguration = () => {
+
+export interface IMapConfiguration {
+    dispatch: ThunkAppDispatch
+    lng: number | string
+    lat: number | string
+    zoom: number | string
+    updateData: (data: MapPosition) => void
+    updateZoom: (zoom: number) => void
+    mapboxMap: MutableRefObject<null | MapBoxType>
+    openLayerMap: MutableRefObject<null | Map>
+    openLayerView: MutableRefObject<null | View>,
+    geoJsonRef: MutableRefObject<any>
+    sourceRef: MutableRefObject<VectorSource<Geometry> | null>
+    vectorRef: MutableRefObject<VectorLayer<VectorSource<Geometry>> | null>
+    openLayerFeatureStyle: Style
+    openLayerMapContainer: MutableRefObject<any>
+    drawObjectRef: MutableRefObject<Draw | null>
+    activeDrawLine: boolean
+    setActiveDrawLine: (value: boolean) => void
+    activeStatusInteraction: (value: boolean) => void
+    addLinePointsInOpenLayer: () => void
+    updateMapboxFeatures: (data?: any) => void
+}
+
+
+export const useMapConfiguration: () => IMapConfiguration = () => {
     const dispatch = useAppDispatch();
+    const [activeDrawLine, setActiveDrawLine] = useState(true);
     const [searchParams] = useSearchParams()
+    const mapboxMap = useRef<null | MapBoxType>(null);
+    const openLayerMap = useRef<null | Map>(null);
+    const openLayerView = useRef<null | View>(null);
+    const geoJsonRef = useRef<any>({
+        type: 'FeatureCollection',
+        'features':
+            []
+    });
+    const sourceRef = useRef<VectorSource<Geometry> | null>(null)
+    const vectorRef = useRef<VectorLayer<VectorSource<Geometry>> | null>(null)
+    const openLayerMapContainer = useRef(null);
+    const drawObjectRef = useRef<Draw | null>(null)
 
 
-    const lng = useAppSelector(state => state.map.lng);
-    const lat = useAppSelector(state => state.map.lat);
-    const zoom = useAppSelector(state => state.map.zoom);
-    const currentMapName = useAppSelector(state => state.map.currentMapName);
+    const lng = searchParams?.get('lng') || defaultPosition.lng;
+    const lat = searchParams?.get('lat') || defaultPosition.lat;
+    const zoom = searchParams?.get('zoom') || defaultPosition.zoom;
 
 
-    const updateZoom = useCallback(
-        (zoom: number, currentMap: MapNameEnum) => {
-            dispatch(updateCurrentMapAction(currentMap))
-            dispatch(updateZoomAction(zoom))
-        },
-        [],
-    );
+    const openLayerFeatureStyle = new Style({
+        stroke: new Stroke({
+            width: 5,
+            color: "#ff0000"
+        }),
+        fill: new Fill({
+            color: "#aa2727"
+        })
+    })
 
-    const updateData = useCallback((data: MapPosition, currentMap: MapNameEnum) => {
-            dispatch(updateCurrentMapAction(currentMap))
+    const activeStatusInteraction = useCallback((value: boolean) => {
+        drawObjectRef.current?.setActive(value)
+    }, []);
+
+
+    const updateData = useCallback((data: MapPosition) => {
             dispatch(updatePositionAction(data))
         }
         , []);
 
-    useEffect(() => {
-        const getZoom = searchParams.get('zoom') || defaultPosition.zoom;
-        const getLng = searchParams.get('lng') || defaultPosition.lng;
-        const getLat = searchParams.get('lat') || defaultPosition.lat;
-        if (getZoom)
-            updateZoom(getZoom as number, MapNameEnum.OPEN_LAYER_MAP)
-        if (getLat && getLng) updateData({lng: getLng as number, lat: getLat as number}, MapNameEnum.OPEN_LAYER_MAP)
 
-    }, []);
+    const updateZoom = useCallback((zoom: number) => {
+            dispatch(updateZoomAction(zoom))
+        }
+        , []);
 
 
-    useEffect(() => {
-        window.history.replaceState(null, "", `?zoom=${zoom}&lng=${lng}&lat=${lat}`)
-    }, [lng, lat, zoom]);
+    const updateMapboxFeatures = useCallback((data?: any) => {
+        const source = mapboxMap.current?.getSource('geojson') as GeoJSONSource
+        source?.setData(data || geoJsonRef.current);
+    }, [])
 
 
-    return {dispatch, lng, lat, zoom, currentMapName, updateZoom, updateData}
+    const addLinePointsInOpenLayer = useCallback(() => {
+        const oldFeature =
+            sourceRef?.current?.getFeatureById('mapbox-line')
+
+        const selectLine = geoJsonRef.current.features?.find((item: { geometry: { type: string; }; }) => item?.geometry?.type === "LineString");
+
+        if (selectLine) {
+            const transformedCoordinates = selectLine.geometry.coordinates.map((item: Coordinate) => ([...fromLonLat(item)]))
+            const feature = new Feature(new LineString(transformedCoordinates))
+            feature.setId('mapbox-line')
+            feature.setStyle(openLayerFeatureStyle)
+            if (!oldFeature) {
+                sourceRef.current?.addFeature(feature)
+            } else {
+                oldFeature?.setGeometry(feature.getGeometry())
+            }
+        } else {
+            if (oldFeature)
+                sourceRef.current?.removeFeature(oldFeature)
+        }
+
+    }, [])
+
+    return {
+        dispatch,
+        lng,
+        lat,
+        zoom,
+        updateData,
+        updateZoom,
+        mapboxMap,
+        openLayerMap,
+        openLayerView,
+        geoJsonRef,
+        sourceRef,
+        vectorRef,
+        openLayerFeatureStyle,
+        openLayerMapContainer,
+        drawObjectRef,
+        activeDrawLine,
+        setActiveDrawLine,
+        activeStatusInteraction,
+        addLinePointsInOpenLayer,
+        updateMapboxFeatures
+    }
 }

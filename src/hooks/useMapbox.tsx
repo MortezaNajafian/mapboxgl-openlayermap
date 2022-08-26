@@ -1,35 +1,32 @@
-import {MutableRefObject, useCallback, useEffect} from "react";
-import mapboxgl, {AnySourceData, GeoJSONSource, Map} from "mapbox-gl";
-import MapNameEnum from "../enums/MapNameEnum";
-import {useMapConfiguration} from "./useMapConfiguration";
-import {updateCurrentMapAction, updateMapBoxCoordinatesAction} from "../store/mapReducer";
+import {MutableRefObject, useEffect} from "react";
+import mapboxgl, {AnySourceData} from "mapbox-gl";
+import {IMapConfiguration} from "./useMapConfiguration";
+import {fromLonLat} from "ol/proj";
 
 
 interface IUseMapbox {
-    map: MutableRefObject<Map | null>
+    config: IMapConfiguration
     mapContainer: MutableRefObject<any>
-    geojson: any,
     linestring: any
 }
 
 
 const useMapbox = (options: IUseMapbox) => {
-
-    const {lng, zoom, lat, currentMapName, updateZoom, updateData, dispatch} = useMapConfiguration();
-    const {map, mapContainer, geojson, linestring} = options;
-
-    const addCoordinateInMapBox = useCallback(
-        (coords: { geometry: { type: string, coordinates: number[][] } }[]) => {
-            dispatch(updateCurrentMapAction(MapNameEnum.MAPBOX_MAP))
-            const findLine = coords.find(item => item.geometry.type === "LineString")
-            if (findLine) {
-                dispatch(updateMapBoxCoordinatesAction(findLine.geometry.coordinates))
-            } else {
-                dispatch(updateMapBoxCoordinatesAction([]))
-            }
-        },
-        [],
-    );
+    const {mapContainer, linestring, config} = options;
+    const {
+        lng,
+        lat,
+        mapboxMap,
+        updateZoom,
+        openLayerView,
+        zoom,
+        updateData,
+        geoJsonRef,
+        addLinePointsInOpenLayer,
+        sourceRef,
+        updateMapboxFeatures
+    } = config
+    const map = mapboxMap
 
 
     useEffect(() => {
@@ -37,8 +34,9 @@ const useMapbox = (options: IUseMapbox) => {
         map.current = new mapboxgl.Map({
             container: mapContainer.current || "",
             style: "https://api.maptiler.com/maps/basic-v2/style.json?key=xyoYFdk7IF6sarFDG4w1",
-            center: [lng, lat],
-            zoom: zoom,
+            center: [+lng, +lat],
+            zoom: +zoom,
+            projection: {name: "lambertConformalConic"}
         });
 
         map.current?.on('drag', () => {
@@ -46,19 +44,19 @@ const useMapbox = (options: IUseMapbox) => {
             updateData({
                 lng: center?.lng || 0,
                 lat: center?.lat || 0,
-            }, MapNameEnum.MAPBOX_MAP)
+            })
 
         })
 
         map.current?.on('zoomend', () => {
-            updateZoom(map?.current?.getZoom() || 0, MapNameEnum.MAPBOX_MAP)
+            updateZoom(map?.current?.getZoom() || 0)
         })
 
 
         map.current?.on('load', () => {
             map.current?.addSource('geojson', {
                 'type': 'geojson',
-                data: geojson
+                data: geoJsonRef.current
             } as AnySourceData);
 
             map.current?.addLayer({
@@ -91,12 +89,20 @@ const useMapbox = (options: IUseMapbox) => {
                 const features = map.current?.queryRenderedFeatures(e.point, {
                     layers: ['measure-points']
                 });
+                // remove open layer map lines when we are drawing line in mapbox gl
+                geoJsonRef.current.features.forEach((item: { properties?: { id?: string; }; }) => {
+                    if (item?.properties?.id?.match(/^openLayer-map-lines-/)) {
+                        geoJsonRef.current.features = []
+                    }
+                })
 
-                if (geojson.features.length > 1) geojson.features.pop();
+                sourceRef.current?.clear()
+
+                if (geoJsonRef.current.features.length > 1) geoJsonRef.current.features.pop();
 
                 if (features?.length) {
                     const id = features[0]?.properties?.id;
-                    geojson.features = geojson.features.filter(
+                    geoJsonRef.current.features = geoJsonRef.current.features.filter(
                         (point: any) => point?.properties?.id !== id
                     );
                 } else {
@@ -107,25 +113,25 @@ const useMapbox = (options: IUseMapbox) => {
                             'coordinates': [e.lngLat.lng, e.lngLat.lat]
                         },
                         'properties': {
-                            'id': String(new Date().getTime())
+                            'id': `mapbox-point-${new Date().getTime()}`
                         }
                     } as never;
 
-                    geojson.features.push(point);
+                    geoJsonRef.current.features.push(point);
                 }
 
 
-                if (geojson.features.length > 1) {
-                    linestring.geometry.coordinates = geojson.features.map(
+                if (geoJsonRef.current.features.length > 1) {
+                    linestring.properties.id = `mapbox-line-${new Date().getTime()}`
+                    linestring.geometry.coordinates = geoJsonRef.current.features.map(
                         (point: any) => point.geometry.coordinates
                     );
 
-                    geojson.features.push(linestring as never);
+                    geoJsonRef.current.features.push(linestring as never);
                 }
 
-                addCoordinateInMapBox(geojson.features)
-                const source = map.current?.getSource('geojson') as GeoJSONSource
-                source?.setData(geojson);
+                addLinePointsInOpenLayer()
+                updateMapboxFeatures()
 
             });
 
@@ -138,14 +144,22 @@ const useMapbox = (options: IUseMapbox) => {
                 if (map.current)
                     map.current.getCanvas().style.cursor = features?.length
                         ? 'pointer'
-                        : 'crosshair';
+                        : 'grab';
             });
+
+
+            map.current?.on('move', (data) => {
+                const center = data.target.getCenter()
+                openLayerView.current?.setCenter(fromLonLat([center.lng, center.lat]))
+            })
+
+            map.current?.on('zoom', (data) => {
+                const zoom = data.target.getZoom()
+                openLayerView.current?.setZoom(zoom)
+            })
         });
 
-    }, []);
-
-
-    return {currentMapName, lng, lat, zoom, dispatch}
+    });
 
 }
 

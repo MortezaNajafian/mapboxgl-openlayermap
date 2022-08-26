@@ -1,4 +1,4 @@
-interface IDefaultPosition {
+export interface IDefaultPosition {
     lng: number,
     lat: number,
     zoom: number

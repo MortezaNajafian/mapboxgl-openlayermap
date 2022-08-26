@@ -1,7 +1,7 @@
 import type {PayloadAction} from '@reduxjs/toolkit'
 import {createSlice} from '@reduxjs/toolkit'
 import MapNameEnum from "../enums/MapNameEnum";
-import defaultPosition from "../constants/defaultPosition";
+import defaultPosition, {IDefaultPosition} from "../constants/defaultPosition";
 
 export interface ICoords {
     uid?: string | number,
@@ -18,7 +18,7 @@ export interface MapState {
     mapboxCoordinates: number[][]
 }
 
-export type MapPosition = Omit<MapState, 'currentMapName' | 'zoom' | 'openLayerCoordinates' | 'mapboxCoordinates'>;
+export type MapPosition = Omit<IDefaultPosition, 'zoom'>;
 
 const initialState: MapState = {
     ...defaultPosition,
