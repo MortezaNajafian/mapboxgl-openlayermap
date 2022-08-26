@@ -14,7 +14,9 @@ import Draw from "ol/interaction/Draw";
 import {GeoJSONSource} from "mapbox-gl";
 import {Vector as VectorSource} from "ol/source";
 import {Geometry} from "ol/geom";
-
+import {
+    defaults as defaultInteractions, DragRotateAndZoom,
+} from 'ol/interaction';
 
 interface IUseOpenLayer {
     config: IMapConfiguration
@@ -29,8 +31,10 @@ const useOpenLayer = (options: IUseOpenLayer) => {
         mapboxMap,
         lat,
         zoom,
+        rotate,
         updateZoom,
         updateData,
+        updateRotate,
         geoJsonRef,
         sourceRef,
         vectorRef,
@@ -83,20 +87,22 @@ const useOpenLayer = (options: IUseOpenLayer) => {
         openLayerView.current = new View({
             center: fromLonLat([+lng, +lat]),
             zoom: +zoom,
-            zoomFactor: 2.38,
-            // projection: 'EPSG:4326',
+            zoomFactor: 2.45,
+            rotation: -(+rotate / 60),
+            enableRotation: true,
         })
 
         map.current = new Map({
+            interactions: defaultInteractions().extend([new DragRotateAndZoom()]),
             layers: [
                 new TileLayer({
                     source: new TileJson({
                         url: "https://api.maptiler.com/maps/basic-v2/tiles.json?key=xyoYFdk7IF6sarFDG4w1",
-                        tileSize: 512
+                        tileSize: 512,
+                        imageSmoothing: true
                     }),
                 }),
             ],
-
             target: openLayerMapContainer.current || "",
             view: openLayerView.current,
         });
@@ -179,6 +185,12 @@ const useOpenLayer = (options: IUseOpenLayer) => {
             sourceRef.current?.removeFeature(feature.selected[0])
         })
 
+
+        openLayerView.current.on("change:rotation", (data) => {
+            updateRotate(Math.abs(data.target.getRotation() * 60))
+            if (!mapboxMap.current?.isRotating())
+                mapboxMap.current?.setBearing(Math.abs(data.target.getRotation() * 60))
+        })
 
     });
 }

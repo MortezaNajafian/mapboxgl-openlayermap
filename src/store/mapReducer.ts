@@ -1,6 +1,5 @@
 import type {PayloadAction} from '@reduxjs/toolkit'
 import {createSlice} from '@reduxjs/toolkit'
-import MapNameEnum from "../enums/MapNameEnum";
 import defaultPosition, {IDefaultPosition} from "../constants/defaultPosition";
 
 export interface ICoords {
@@ -13,18 +12,13 @@ export interface MapState {
     lng: number,
     lat: number,
     zoom: number,
-    currentMapName: MapNameEnum,
-    openLayerCoordinates: ICoords[],
-    mapboxCoordinates: number[][]
+    rotate: number,
 }
 
-export type MapPosition = Omit<IDefaultPosition, 'zoom'>;
+export type MapPosition = Omit<IDefaultPosition, 'zoom' | 'rotate'>;
 
 const initialState: MapState = {
     ...defaultPosition,
-    currentMapName: MapNameEnum.NONE,
-    openLayerCoordinates: [],
-    mapboxCoordinates: []
 }
 
 export const mapSlice = createSlice({
@@ -38,22 +32,8 @@ export const mapSlice = createSlice({
         updateZoomAction: (state, action: PayloadAction<number>) => {
             state.zoom = action.payload
         },
-        updateCurrentMapAction: (state, action: PayloadAction<MapNameEnum>) => {
-            state.currentMapName = action.payload
-        },
-        updateOpenLayerCoordinatesAction: (state, action: PayloadAction<ICoords>) => {
-            state.openLayerCoordinates.push(action.payload)
-        },
-        updateMapBoxCoordinatesAction: (state, action: PayloadAction<number[][]>) => {
-            state.mapboxCoordinates = action.payload
-        },
-        removeOpenLayerCoordinateByUidAction: (state, action: PayloadAction<string>) => {
-            const findEl = state.openLayerCoordinates.findIndex(item => item.uid === action.payload)
-            if (findEl >= 0)
-                state.openLayerCoordinates.splice(findEl, 1)
-        },
-        clearMapBoxCoordinatesAction: (state) => {
-            state.mapboxCoordinates = []
+        updateRotateAction: (state, action: PayloadAction<number>) => {
+            state.rotate = action.payload
         },
     },
 })
@@ -61,12 +41,8 @@ export const mapSlice = createSlice({
 // Action creators are generated for each case reducer function
 export const {
     updatePositionAction,
-    updateCurrentMapAction,
     updateZoomAction,
-    updateOpenLayerCoordinatesAction,
-    removeOpenLayerCoordinateByUidAction,
-    updateMapBoxCoordinatesAction,
-    clearMapBoxCoordinatesAction
+    updateRotateAction
 } = mapSlice.actions
 
 export default mapSlice.reducer

@@ -20,6 +20,7 @@ const useMapbox = (options: IUseMapbox) => {
         updateZoom,
         openLayerView,
         zoom,
+        rotate,
         updateData,
         geoJsonRef,
         addLinePointsInOpenLayer,
@@ -36,7 +37,8 @@ const useMapbox = (options: IUseMapbox) => {
             style: "https://api.maptiler.com/maps/basic-v2/style.json?key=xyoYFdk7IF6sarFDG4w1",
             center: [+lng, +lat],
             zoom: +zoom,
-            projection: {name: "lambertConformalConic"}
+            bearing : +rotate,
+            pitchWithRotate: false,
         });
 
         map.current?.on('drag', () => {
@@ -56,7 +58,8 @@ const useMapbox = (options: IUseMapbox) => {
         map.current?.on('load', () => {
             map.current?.addSource('geojson', {
                 'type': 'geojson',
-                data: geoJsonRef.current
+                data: geoJsonRef.current,
+
             } as AnySourceData);
 
             map.current?.addLayer({
@@ -151,6 +154,11 @@ const useMapbox = (options: IUseMapbox) => {
             map.current?.on('move', (data) => {
                 const center = data.target.getCenter()
                 openLayerView.current?.setCenter(fromLonLat([center.lng, center.lat]))
+            })
+
+            map.current?.on('rotate', (data) => {
+                const bearing = data.target.getBearing()
+                openLayerView.current?.setRotation(-(bearing / 60))
             })
 
             map.current?.on('zoom', (data) => {

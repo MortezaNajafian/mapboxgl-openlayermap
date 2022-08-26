@@ -1,6 +1,6 @@
 import {ThunkAppDispatch, useAppDispatch} from "../app/storeHook";
 import {MutableRefObject, useCallback, useRef, useState} from "react";
-import {MapPosition, updatePositionAction, updateZoomAction} from "../store/mapReducer";
+import {MapPosition, updatePositionAction, updateRotateAction, updateZoomAction} from "../store/mapReducer";
 import {useSearchParams} from 'react-router-dom'
 import defaultPosition from "../constants/defaultPosition";
 import {GeoJSONSource, Map as MapBoxType} from "mapbox-gl";
@@ -21,8 +21,10 @@ export interface IMapConfiguration {
     lng: number | string
     lat: number | string
     zoom: number | string
+    rotate: number | string
     updateData: (data: MapPosition) => void
     updateZoom: (zoom: number) => void
+    updateRotate: (rotate: number) => void
     mapboxMap: MutableRefObject<null | MapBoxType>
     openLayerMap: MutableRefObject<null | Map>
     openLayerView: MutableRefObject<null | View>,
@@ -61,6 +63,7 @@ export const useMapConfiguration: () => IMapConfiguration = () => {
     const lng = searchParams?.get('lng') || defaultPosition.lng;
     const lat = searchParams?.get('lat') || defaultPosition.lat;
     const zoom = searchParams?.get('zoom') || defaultPosition.zoom;
+    const rotate = searchParams?.get('rotate') || defaultPosition.rotate;
 
 
     const openLayerFeatureStyle = new Style({
@@ -86,6 +89,11 @@ export const useMapConfiguration: () => IMapConfiguration = () => {
 
     const updateZoom = useCallback((zoom: number) => {
             dispatch(updateZoomAction(zoom))
+        }
+        , []);
+
+    const updateRotate = useCallback((rotate: number) => {
+            dispatch(updateRotateAction(rotate))
         }
         , []);
 
@@ -124,8 +132,10 @@ export const useMapConfiguration: () => IMapConfiguration = () => {
         lng,
         lat,
         zoom,
+        rotate,
         updateData,
         updateZoom,
+        updateRotate,
         mapboxMap,
         openLayerMap,
         openLayerView,
@@ -139,6 +149,6 @@ export const useMapConfiguration: () => IMapConfiguration = () => {
         setActiveDrawLine,
         activeStatusInteraction,
         addLinePointsInOpenLayer,
-        updateMapboxFeatures
+        updateMapboxFeatures,
     }
 }
