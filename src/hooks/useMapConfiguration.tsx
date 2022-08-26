@@ -1,6 +1,6 @@
 import {ThunkAppDispatch, useAppDispatch} from "../app/storeHook";
 import {MutableRefObject, useCallback, useRef, useState} from "react";
-import {MapPosition, updatePositionAction, updateRotateAction, updateZoomAction} from "../store/mapReducer";
+import {MapPosition} from "../store/mapReducer";
 import {useSearchParams} from 'react-router-dom'
 import defaultPosition from "../constants/defaultPosition";
 import {GeoJSONSource, Map as MapBoxType} from "mapbox-gl";
@@ -14,6 +14,7 @@ import {Fill, Stroke, Style} from "ol/style";
 import {Coordinate} from "ol/coordinate";
 import {fromLonLat} from "ol/proj";
 import {Feature} from "ol";
+import useUpdate from "./useUpdate";
 
 
 export interface IMapConfiguration {
@@ -81,22 +82,7 @@ export const useMapConfiguration: () => IMapConfiguration = () => {
     }, []);
 
 
-    const updateData = useCallback((data: MapPosition) => {
-            dispatch(updatePositionAction(data))
-        }
-        , []);
-
-
-    const updateZoom = useCallback((zoom: number) => {
-            dispatch(updateZoomAction(zoom))
-        }
-        , []);
-
-    const updateRotate = useCallback((rotate: number) => {
-            dispatch(updateRotateAction(rotate))
-        }
-        , []);
-
+    const {updateRotate, updateData, updateZoom} = useUpdate()
 
     const updateMapboxFeatures = useCallback((data?: any) => {
         const source = mapboxMap.current?.getSource('geojson') as GeoJSONSource

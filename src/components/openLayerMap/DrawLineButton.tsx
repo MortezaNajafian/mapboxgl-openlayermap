@@ -4,7 +4,6 @@ import Draw from "ol/interaction/Draw";
 
 interface IDrawLineButtonProps {
     drawObjectRef: MutableRefObject<Draw | null>
-
 }
 
 const DrawLineButton: FC<IDrawLineButtonProps> = ({drawObjectRef}) => {
@@ -18,8 +17,10 @@ const DrawLineButton: FC<IDrawLineButtonProps> = ({drawObjectRef}) => {
 
     return (
         <button onClick={() => setActive(prevState => !prevState)}
-                className={s.activeLine}>{active ? "DeActive Line" : "Active Line"}</button>
-    );
+                className={s.activeLine}
+                data-test="button-openlayer-activate">{active ? "DeActive Line" : "Active Line"}</button>
+    )
+
 };
 
 export default DrawLineButton;

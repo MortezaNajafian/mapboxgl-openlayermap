@@ -39,6 +39,7 @@ const useMapbox = (options: IUseMapbox) => {
                 zoom: +zoom,
                 bearing: +rotate,
                 pitchWithRotate: false,
+
             });
             map.current?.addControl(new mapboxgl.NavigationControl());
 

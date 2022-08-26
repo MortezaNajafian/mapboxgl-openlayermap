@@ -14,7 +14,7 @@ const OpenLayerMap: FC<IMapConfiguration> = (config) => {
 
 
     return (
-        <div className={s.wrapper}>
+        <div className={s.wrapper} data-test="open-layer-container">
             <div ref={openLayerMapContainer} className={s.openLayerMapContainer}>
             </div>
             <DrawLineButton drawObjectRef={drawObjectRef}/>

@@ -24,7 +24,7 @@ const MapBoxMap: FC<IMapConfiguration> = (config) => {
 
 
     return (
-        <div className={s.wrapper}>
+        <div className={s.wrapper} data-test="mapbox-container">
             <div ref={mapContainer} className={s.mapboxGLContainer}></div>
         </div>
     )

@@ -14,5 +14,10 @@
     @include clearButton;
   }
 
+  .testButton {
+    @include clearButton;
+    top : 200px
+  }
+
 }
 
