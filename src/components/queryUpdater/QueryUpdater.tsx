@@ -3,7 +3,7 @@ import {useAppSelector} from "../../app/storeHook";
 import useUpdate from "../../hooks/useUpdate";
 import defaultPosition from "../../constants/defaultPosition";
 import {useSearchParams} from "react-router-dom";
-
+import {debounce} from 'lodash'
 
 const QueryUpdater = () => {
 
@@ -31,8 +31,13 @@ const QueryUpdater = () => {
     }, []);
 
 
-    useEffect(() => {
+    const update = debounce(() => {
         window.history.replaceState(null, "", `?zoom=${zoom}&lng=${lng}&lat=${lat}&rotate=${rotate}`)
+    }, 100)
+
+
+    useEffect(() => {
+        update()
     }, [lng, lat, zoom, rotate])
 
     return null

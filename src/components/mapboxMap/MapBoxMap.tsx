@@ -1,4 +1,4 @@
-import {FC, useRef} from "react";
+import React, {FC, useRef} from "react";
 import s from './MapBoxGLMap.module.scss'
 import useMapbox from "../../hooks/useMapbox";
 import {IMapConfiguration} from "../../hooks/useMapConfiguration";

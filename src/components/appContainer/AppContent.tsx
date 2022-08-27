@@ -3,7 +3,7 @@ import MapBoxMap from "../mapboxMap/MapBoxMap";
 import OpenLayerMap from "../openLayerMap/OpenLayerMap";
 import {useMapConfiguration} from "../../hooks/useMapConfiguration";
 import QueryUpdater from "../queryUpdater/QueryUpdater";
-
+import React from 'react'
 
 const AppContent = () => {
     const config = useMapConfiguration();

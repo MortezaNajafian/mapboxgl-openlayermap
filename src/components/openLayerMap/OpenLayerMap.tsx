@@ -3,7 +3,7 @@ import s from './OpenLayerMap.module.scss'
 import useOpenLayer from "../../hooks/useOpenLayer";
 import {IMapConfiguration} from "../../hooks/useMapConfiguration";
 import DrawLineButton from "./DrawLineButton";
-
+import React from 'react'
 const OpenLayerMap: FC<IMapConfiguration> = (config) => {
 
     const {openLayerMapContainer, drawObjectRef} = config
