@@ -42,6 +42,15 @@ We can rotate by right click of mouse in windows or linux or hold two finger in 
 For run e2e testing you should run ***yarn cypress*** then select e2e > select browser for test > select test file for visual testing. Also for headless testing you
 can run ***yarn cypress:headless***
 
+### Test Coverage
+After running e2e tests, folder __coverage__ will create in the root of project.
+
+<img height="400" src="https://drive.google.com/file/d/1IuhXHC0ES6tqX1s6HcS6WhLE2EsVyjVa/view?usp=sharing" width="400"/>
+
+
+Go to coverage>lcov-report>src>index.html , then open index.html for view the test coverage summary.
+
+<img src="https://drive.google.com/file/d/1So_utV7RluAE5a11spbY819SRi8vI4Bj/view?usp=sharing"/>
 
 #### Extra information
 Zoom is already active by scrolling mouse.

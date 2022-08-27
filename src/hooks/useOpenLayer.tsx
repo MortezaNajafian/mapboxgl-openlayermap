@@ -87,7 +87,7 @@ const useOpenLayer = (options: IUseOpenLayer) => {
         openLayerView.current = new View({
             center: fromLonLat([+lng, +lat]),
             zoom: +zoom,
-            zoomFactor: 2.45,
+            zoomFactor: 2.38,
             rotation: -(+rotate / 60),
             enableRotation: true,
         })
