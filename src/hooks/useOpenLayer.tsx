@@ -15,8 +15,10 @@ import {GeoJSONSource} from "mapbox-gl";
 import {Vector as VectorSource} from "ol/source";
 import {Geometry} from "ol/geom";
 import {
-    defaults as defaultInteractions, DragRotateAndZoom,
+    defaults as defaultInteractions, DragRotateAndZoom
 } from 'ol/interaction';
+import {ZoomToExtent, defaults as defaultControls} from 'ol/control';
+
 
 interface IUseOpenLayer {
     config: IMapConfiguration
@@ -86,20 +88,26 @@ const useOpenLayer = (options: IUseOpenLayer) => {
 
         openLayerView.current = new View({
             center: fromLonLat([+lng, +lat]),
-            zoom: +zoom,
-            zoomFactor: 2.38,
+            zoom: +zoom + 1,
             rotation: -(+rotate / 60),
-            enableRotation: true,
         })
 
         map.current = new Map({
             interactions: defaultInteractions().extend([new DragRotateAndZoom()]),
+            controls: defaultControls().extend([
+                new ZoomToExtent({
+                    extent: [
+                        813079.7791264898, 5929220.284081122, 848966.9639063801,
+                        5936863.986909639,
+                    ],
+                }),
+            ]),
             layers: [
                 new TileLayer({
                     source: new TileJson({
                         url: "https://api.maptiler.com/maps/basic-v2/tiles.json?key=xyoYFdk7IF6sarFDG4w1",
                         tileSize: 512,
-                        imageSmoothing: true
+                        wrapX: false
                     }),
                 }),
             ],
@@ -124,11 +132,11 @@ const useOpenLayer = (options: IUseOpenLayer) => {
         });
 
 
-        openLayerView.current?.on('change:resolution', () => {
-            const newZoom = openLayerView.current?.getZoom() || 0;
-            updateZoom(newZoom || 14)
+        openLayerView.current?.on('change:resolution', (data) => {
+            const newZoom = data.target.getZoom()
+            updateZoom(newZoom - 1)
             if (!mapboxMap.current?.isZooming())
-                mapboxMap.current?.setZoom(newZoom)
+                mapboxMap.current?.setZoom(newZoom - 1)
         })
 
 

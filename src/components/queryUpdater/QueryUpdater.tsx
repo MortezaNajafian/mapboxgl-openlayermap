@@ -28,7 +28,7 @@ const QueryUpdater = () => {
         updateZoom(+getZoom)
         updateData({lng: +getLng, lat: +getLat})
         updateRotate(+getRotate)
-    }, []);
+    }, [searchParams]);
 
 
     const update = debounce(() => {

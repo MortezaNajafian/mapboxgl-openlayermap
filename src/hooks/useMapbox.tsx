@@ -39,6 +39,7 @@ const useMapbox = (options: IUseMapbox) => {
                 zoom: +zoom,
                 bearing: +rotate,
                 pitchWithRotate: false,
+                projection : {name :"mercator"}
 
             });
             map.current?.addControl(new mapboxgl.NavigationControl());
@@ -166,7 +167,7 @@ const useMapbox = (options: IUseMapbox) => {
 
                 map.current?.on('zoom', (data) => {
                     const zoom = data.target.getZoom()
-                    openLayerView.current?.setZoom(zoom)
+                    openLayerView.current?.setZoom(zoom + 1)
                 })
             });
 
