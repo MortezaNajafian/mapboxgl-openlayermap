@@ -1,151 +1,179 @@
-import {MutableRefObject, useCallback, useEffect} from "react";
-import mapboxgl, {AnySourceData, GeoJSONSource, Map} from "mapbox-gl";
-import MapNameEnum from "../enums/MapNameEnum";
-import {useMapConfiguration} from "./useMapConfiguration";
-import {updateCurrentMapAction, updateMapBoxCoordinatesAction} from "../store/mapReducer";
+import {MutableRefObject, useEffect} from "react";
+import mapboxgl, {AnySourceData} from "mapbox-gl";
+import {IMapConfiguration} from "./useMapConfiguration";
+import {fromLonLat} from "ol/proj";
 
 
 interface IUseMapbox {
-    map: MutableRefObject<Map | null>
+    config: IMapConfiguration
     mapContainer: MutableRefObject<any>
-    geojson: any,
     linestring: any
 }
 
 
 const useMapbox = (options: IUseMapbox) => {
-
-    const {lng, zoom, lat, currentMapName, updateZoom, updateData, dispatch} = useMapConfiguration();
-    const {map, mapContainer, geojson, linestring} = options;
-
-    const addCoordinateInMapBox = useCallback(
-        (coords: { geometry: { type: string, coordinates: number[][] } }[]) => {
-            dispatch(updateCurrentMapAction(MapNameEnum.MAPBOX_MAP))
-            const findLine = coords.find(item => item.geometry.type === "LineString")
-            if (findLine) {
-                dispatch(updateMapBoxCoordinatesAction(findLine.geometry.coordinates))
-            } else {
-                dispatch(updateMapBoxCoordinatesAction([]))
-            }
-        },
-        [],
-    );
+    const {mapContainer, linestring, config} = options;
+    const {
+        lng,
+        lat,
+        mapboxMap,
+        updateZoom,
+        openLayerView,
+        zoom,
+        rotate,
+        updateData,
+        geoJsonRef,
+        addLinePointsInOpenLayer,
+        sourceRef,
+        updateMapboxFeatures
+    } = config
+    const map = mapboxMap
 
 
     useEffect(() => {
-        if (map?.current) return;
-        map.current = new mapboxgl.Map({
-            container: mapContainer.current || "",
-            style: "https://api.maptiler.com/maps/basic-v2/style.json?key=xyoYFdk7IF6sarFDG4w1",
-            center: [lng, lat],
-            zoom: zoom,
-        });
+            if (map?.current) return;
+            map.current = new mapboxgl.Map({
+                container: mapContainer.current || "",
+                style: "https://api.maptiler.com/maps/basic-v2/style.json?key=xyoYFdk7IF6sarFDG4w1",
+                center: [+lng, +lat],
+                zoom: +zoom,
+                bearing: +rotate,
+                pitchWithRotate: false,
+                projection : {name :"mercator"}
 
-        map.current?.on('drag', () => {
-            const center = map.current?.getCenter()
-            updateData({
-                lng: center?.lng || 0,
-                lat: center?.lat || 0,
-            }, MapNameEnum.MAPBOX_MAP)
-
-        })
-
-        map.current?.on('zoomend', () => {
-            updateZoom(map?.current?.getZoom() || 0, MapNameEnum.MAPBOX_MAP)
-        })
-
-
-        map.current?.on('load', () => {
-            map.current?.addSource('geojson', {
-                'type': 'geojson',
-                data: geojson
-            } as AnySourceData);
-
-            map.current?.addLayer({
-                id: 'measure-points',
-                type: 'circle',
-                source: 'geojson',
-                paint: {
-                    'circle-radius': 5,
-                    'circle-color': '#000'
-                },
-                filter: ['in', '$type', 'Point']
             });
+            map.current?.addControl(new mapboxgl.NavigationControl());
 
-            map.current?.addLayer({
-                id: 'measure-lines',
-                type: 'line',
-                source: 'geojson',
-                layout: {
-                    'line-cap': 'round',
-                    'line-join': 'round'
-                },
-                paint: {
-                    'line-color': '#000',
-                    'line-width': 2.5
-                },
-                filter: ['in', '$type', 'LineString'],
-            });
+            map.current?.on('drag', () => {
+                const center = map.current?.getCenter()
+                updateData({
+                    lng: center?.lng || 0,
+                    lat: center?.lat || 0,
+                })
 
-            map.current?.on('click', (e) => {
-                const features = map.current?.queryRenderedFeatures(e.point, {
-                    layers: ['measure-points']
+            })
+
+            map.current?.on('zoomend', () => {
+                updateZoom(map?.current?.getZoom() || 0)
+            })
+
+
+            map.current?.on('load', () => {
+
+                map.current?.addSource('geojson', {
+                    'type': 'geojson',
+                    data: geoJsonRef.current,
+
+                } as AnySourceData);
+
+                map.current?.addLayer({
+                    id: 'measure-points',
+                    type: 'circle',
+                    source: 'geojson',
+                    paint: {
+                        'circle-radius': 5,
+                        'circle-color': '#000'
+                    },
+                    filter: ['in', '$type', 'Point']
                 });
 
-                if (geojson.features.length > 1) geojson.features.pop();
+                map.current?.addLayer({
+                    id: 'measure-lines',
+                    type: 'line',
+                    source: 'geojson',
+                    layout: {
+                        'line-cap': 'round',
+                        'line-join': 'round'
+                    },
+                    paint: {
+                        'line-color': '#000',
+                        'line-width': 2.5
+                    },
+                    filter: ['in', '$type', 'LineString'],
+                });
 
-                if (features?.length) {
-                    const id = features[0]?.properties?.id;
-                    geojson.features = geojson.features.filter(
-                        (point: any) => point?.properties?.id !== id
-                    );
-                } else {
-                    const point = {
-                        'type': 'Feature',
-                        'geometry': {
-                            'type': 'Point',
-                            'coordinates': [e.lngLat.lng, e.lngLat.lat]
-                        },
-                        'properties': {
-                            'id': String(new Date().getTime())
+                map.current?.on('click', (e) => {
+                    const features = map.current?.queryRenderedFeatures(e.point, {
+                        layers: ['measure-points']
+                    });
+                    // remove open layer map lines when we are drawing line in mapbox gl
+                    geoJsonRef.current.features.forEach((item: { properties?: { id?: string; }; }) => {
+                        if (item?.properties?.id?.match(/^openLayer-map-lines-/)) {
+                            geoJsonRef.current.features = []
                         }
-                    } as never;
+                    })
 
-                    geojson.features.push(point);
-                }
+                    sourceRef.current?.clear()
+
+                    if (geoJsonRef.current.features.length > 1) geoJsonRef.current.features.pop();
+
+                    if (features?.length) {
+                        const id = features[0]?.properties?.id;
+                        geoJsonRef.current.features = geoJsonRef.current.features.filter(
+                            (point: any) => point?.properties?.id !== id
+                        );
+                    } else {
+                        const point = {
+                            'type': 'Feature',
+                            'geometry': {
+                                'type': 'Point',
+                                'coordinates': [e.lngLat.lng, e.lngLat.lat]
+                            },
+                            'properties': {
+                                'id': `mapbox-point-${new Date().getTime()}`
+                            }
+                        } as never;
+
+                        geoJsonRef.current.features.push(point);
+                    }
 
 
-                if (geojson.features.length > 1) {
-                    linestring.geometry.coordinates = geojson.features.map(
-                        (point: any) => point.geometry.coordinates
-                    );
+                    if (geoJsonRef.current.features.length > 1) {
+                        linestring.properties.id = `mapbox-line-${new Date().getTime()}`
+                        linestring.geometry.coordinates = geoJsonRef.current.features.map(
+                            (point: any) => point.geometry.coordinates
+                        );
 
-                    geojson.features.push(linestring as never);
-                }
+                        geoJsonRef.current.features.push(linestring as never);
+                    }
 
-                addCoordinateInMapBox(geojson.features)
-                const source = map.current?.getSource('geojson') as GeoJSONSource
-                source?.setData(geojson);
+                    addLinePointsInOpenLayer()
+                    updateMapboxFeatures()
 
-            });
-
-
-            map.current?.on('mousemove', (e) => {
-                const features = map.current?.queryRenderedFeatures(e.point, {
-                    layers: ['measure-points']
                 });
 
-                if (map.current)
-                    map.current.getCanvas().style.cursor = features?.length
-                        ? 'pointer'
-                        : 'crosshair';
+
+                map.current?.on('mousemove', (e) => {
+                    const features = map.current?.queryRenderedFeatures(e.point, {
+                        layers: ['measure-points']
+                    });
+
+                    if (map.current)
+                        map.current.getCanvas().style.cursor = features?.length
+                            ? 'pointer'
+                            : 'grab';
+                });
+
+
+                map.current?.on('move', (data) => {
+                    const center = data.target.getCenter()
+                    openLayerView.current?.setCenter(fromLonLat([center.lng, center.lat]))
+                })
+
+                map.current?.on('rotate', (data) => {
+                    const bearing = data.target.getBearing()
+                    openLayerView.current?.setRotation(-(bearing / 60))
+                })
+
+                map.current?.on('zoom', (data) => {
+                    const zoom = data.target.getZoom()
+                    openLayerView.current?.setZoom(zoom + 1)
+                })
             });
-        });
 
-    }, []);
-
-
-    return {currentMapName, lng, lat, zoom, dispatch}
+        }
+    )
+    ;
 
 }
 

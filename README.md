@@ -30,6 +30,28 @@ Yo can draw line by clicking on map to create a point thus line will make betwee
 Also you can remove line by click on points.
 You can move map by holding left click of mouse.
 
+### Rotate in OpenLayer Map
+We can rotate by clicking on deactive line then hold shift+left mouse key and rotate the map.
+
+
+### Rotate in Mapbox Map
+We can rotate by right click of mouse in windows or linux or hold two finger in touchpad in macOS.
+
+
+## E2E Testing
+For run e2e testing you should run ***yarn cypress*** then select e2e > select browser for test > select test file for visual testing. Also for headless testing you
+can run ***yarn cypress:headless***
+
+### Test Coverage
+After running e2e tests, folder __coverage__ will create in the root of project.
+
+<img height="400" src="https://i.postimg.cc/XJ89WtNk/Screen-Shot-2022-08-27-at-9-17-23-AM.png" width="400"/>
+
+
+Go to coverage>lcov-report>src>index.html , then open index.html for view the test coverage summary.
+
+<img src="https://i.postimg.cc/kGgKgwB3/Screen-Shot-2022-08-27-at-9-25-32-AM.png"/>
+
 #### Extra information
 Zoom is already active by scrolling mouse.
 After changing zoom,lng and lat these data are change in location bar of window. You can copy address on paste that in new tab to take map in that position.
